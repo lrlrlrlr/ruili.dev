@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="en" data-theme="green">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rui Li — Software Engineer</title>
+<meta name="description" content="Rui Li — software engineer in Sydney, Australia. Home for the small, fast tools I build and ship.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0e0d">
+<link rel="canonical" href="https://ruili.dev/">
+
+<!-- Open Graph / social -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ruili.dev/">
+<meta property="og:title" content="Rui Li — Software Engineer">
+<meta property="og:description" content="Software engineer in Sydney. Home for the small, fast tools I build and ship.">
+<meta property="og:site_name" content="ruili.dev">
+<meta name="twitter:card" content="summary">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230a0e0d'/><path d='M15 20l12 12-12 12' stroke='%233ddc97' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/><path d='M34 44h16' stroke='%233ddc97' stroke-width='6' stroke-linecap='round'/></svg>">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   ruili.dev — terminal landing page
+   Single file. No build step. No dependencies.
+   ───────────────────────────────────────────────────────────── */
+
+:root{
+  --bg:#080b0a;
+  --bg-deep:#050807;
+  --panel:#0c1211;
+  --panel-2:#0f1716;
+  --border:#1c2a26;
+  --fg:#cfe8dc;
+  --dim:#6b8a7e;
+  --dimmer:#3f5850;
+
+  --accent:#3ddc97;
+  --accent-soft:#2aa877;
+  --accent-rgb:61,220,151;
+
+  --cyan:#5cc8e8;
+  --amber:#ffb454;
+  --magenta:#ff79c6;
+  --red:#ff6b6b;
+
+  --radius:14px;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+html[data-theme="amber"]{ --accent:#ffb454; --accent-soft:#c98a34; --accent-rgb:255,180,84; --fg:#f0dfc4; --dim:#9a8261; --dimmer:#5c4d38; --border:#2c2519; --panel:#12100b; --panel-2:#191510; --bg:#0b0906; --bg-deep:#070603; }
+html[data-theme="ice"]{ --accent:#5cc8e8; --accent-soft:#3d94ae; --accent-rgb:92,200,232; --fg:#cfe4ee; --dim:#6d8b99; --dimmer:#3f5560; --border:#1a2830; --panel:#0a1115; --panel-2:#0e171c; --bg:#060b0e; --bg-deep:#040709; }
+html[data-theme="magenta"]{ --accent:#ff79c6; --accent-soft:#c85a9b; --accent-rgb:255,121,198; --fg:#f0d7e7; --dim:#9c7189; --dimmer:#5e4353; --border:#2a1c25; --panel:#120b10; --panel-2:#191016; --bg:#0a0609; --bg-deep:#070406; }
+
+*,*::before,*::after{ box-sizing:border-box; }
+[hidden]{ display:none !important; }
+html{ -webkit-text-size-adjust:100%; }
+body{
+  margin:0;
+  min-height:100dvh;
+  background:
+    radial-gradient(1200px 700px at 50% -12%, rgba(var(--accent-rgb),.10), transparent 62%),
+    radial-gradient(900px 900px at 88% 108%, rgba(var(--accent-rgb),.06), transparent 60%),
+    var(--bg);
+  color:var(--fg);
+  font-family:var(--mono);
+  font-size:15px;
+  line-height:1.65;
+  font-variant-ligatures:none;
+  padding:clamp(12px,3vw,40px) clamp(10px,3vw,40px) clamp(28px,6vw,64px);
+  display:flex; flex-direction:column; align-items:center;
+  transition:background .5s ease,color .5s ease;
+}
+
+/* ── CRT overlay ───────────────────────────────────────────── */
+.crt{ position:fixed; inset:0; pointer-events:none; z-index:90; }
+.crt::before{
+  content:""; position:absolute; inset:0;
+  background:repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.30) 2px 4px);
+  opacity:.42; mix-blend-mode:multiply;
+}
+.crt::after{
+  content:""; position:absolute; left:0; right:0; height:32vh;
+  background:linear-gradient(to bottom, transparent, rgba(var(--accent-rgb),.045), transparent);
+  animation:sweep 8.5s linear infinite;
+}
+@keyframes sweep{ 0%{ transform:translateY(-40vh);} 100%{ transform:translateY(130vh);} }
+.vignette{
+  position:fixed; inset:0; pointer-events:none; z-index:91;
+  background:radial-gradient(120% 90% at 50% 45%, transparent 52%, rgba(0,0,0,.62) 100%);
+}
+
+/* ── Terminal window ───────────────────────────────────────── */
+.term{
+  width:100%; max-width:1000px;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb),.06),
+    0 30px 90px -30px rgba(0,0,0,.9),
+    0 0 120px -50px rgba(var(--accent-rgb),.45);
+  overflow:hidden;
+  position:relative; z-index:1;
+  animation:boot-in .7s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes boot-in{ from{ opacity:0; transform:translateY(14px) scale(.99);} to{ opacity:1; transform:none;} }
+
+.bar{
+  display:flex; align-items:center; gap:12px;
+  padding:11px 14px;
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.012));
+  border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:5;
+  backdrop-filter:blur(8px);
+}
+.dots{ display:flex; gap:7px; flex:none; }
+.dots i{ width:11px; height:11px; border-radius:50%; display:block; }
+.dots i:nth-child(1){ background:#ff5f57; }
+.dots i:nth-child(2){ background:#febc2e; }
+.dots i:nth-child(3){ background:#28c840; }
+.bar__title{ flex:1; text-align:center; color:var(--dim); font-size:12.5px; letter-spacing:.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bar__title b{ color:var(--fg); font-weight:600; }
+.bar__badge{
+  flex:none; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--accent); border:1px solid rgba(var(--accent-rgb),.35);
+  border-radius:999px; padding:2px 9px; background:rgba(var(--accent-rgb),.07);
+}
+.bar__badge::before{ content:"●"; font-size:8px; vertical-align:2px; margin-right:5px; animation:pulse 2.4s ease-in-out infinite; display:inline-block; }
+@keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+
+.body{ padding:clamp(16px,3.2vw,30px); }
+
+/* ── Generic terminal lines ────────────────────────────────── */
+.cmd{ color:var(--fg); margin:0; white-space:pre-wrap; word-break:break-word; }
+.cmd::before{ content:"$ "; color:var(--accent); font-weight:700; }
+.out{ color:var(--dim); margin:.15rem 0 0; }
+.blk{ margin:0 0 1.9rem; }
+.blk[hidden]{ display:none; }
+.reveal{ animation:fade-up .42s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes fade-up{ from{ opacity:0; transform:translateY(6px);} to{ opacity:1; transform:none;} }
+a{ color:var(--accent); text-decoration:none; border-bottom:1px solid rgba(var(--accent-rgb),.28); transition:border-color .18s,color .18s,background .18s; }
+a:hover,a:focus-visible{ border-bottom-color:var(--accent); background:rgba(var(--accent-rgb),.1); }
+:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:3px; }
+
+/* ── Hero ──────────────────────────────────────────────────── */
+.hero__name{
+  font-size:clamp(2.1rem,8.5vw,4.4rem);
+  line-height:1.02; margin:.35rem 0 .1rem; font-weight:700; letter-spacing:-.02em;
+  color:var(--accent);
+  text-shadow:0 0 26px rgba(var(--accent-rgb),.45), 0 0 70px rgba(var(--accent-rgb),.18);
+}
+.hero__role{ font-size:clamp(.95rem,2.6vw,1.18rem); color:var(--fg); margin:0 0 .55rem; font-weight:400; }
+.hero__meta{ color:var(--dim); font-size:.86rem; letter-spacing:.02em; display:flex; flex-wrap:wrap; gap:.35rem 1.1rem; margin-top:.7rem; }
+.hero__meta span{ display:inline-flex; align-items:center; gap:.45rem; }
+.hero__meta span::before{ content:"▸"; color:var(--accent-soft); }
+.bio{ color:var(--fg); max-width:66ch; margin:1.1rem 0 0; }
+.bio em{ color:var(--accent); font-style:normal; }
+
+/* ── Section headings ──────────────────────────────────────── */
+.sec-head{ display:flex; align-items:center; gap:14px; margin:0 0 1.05rem; }
+.sec-head .cmd{ flex:none; }
+.sec-head .rule{ flex:1; height:1px; background:linear-gradient(90deg,var(--border),transparent); }
+
+/* ── Tools grid ────────────────────────────────────────────── */
+.tools{ display:grid; grid-template-columns:repeat(auto-fill,minmax(272px,1fr)); gap:14px; margin:0; padding:0; list-style:none; }
+.tool{
+  position:relative; display:flex; flex-direction:column; gap:.55rem;
+  padding:16px 17px 15px;
+  background:rgba(255,255,255,.022);
+  border:1px solid var(--border); border-radius:11px;
+  transition:transform .22s cubic-bezier(.2,.8,.2,1), border-color .22s, background .22s, box-shadow .22s;
+  overflow:hidden;
+}
+.tool::after{
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:0;
+  background:radial-gradient(420px 200px at var(--mx,50%) var(--my,0%), rgba(var(--accent-rgb),.13), transparent 68%);
+  transition:opacity .28s;
+}
+.tool:hover,.tool:focus-within{
+  transform:translateY(-3px);
+  border-color:rgba(var(--accent-rgb),.42);
+  background:rgba(var(--accent-rgb),.045);
+  box-shadow:0 16px 40px -22px rgba(var(--accent-rgb),.7);
+}
+.tool:hover::after,.tool:focus-within::after{ opacity:1; }
+.tool__top{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.tool__name{ font-size:1.02rem; font-weight:600; margin:0; letter-spacing:-.01em; }
+.tool__name a{ color:var(--fg); border:0; }
+.tool__name a::after{ content:""; position:absolute; inset:0; }   /* full-card click target */
+.tool:hover .tool__name a{ color:var(--accent); }
+.tool__name .arrow{ color:var(--accent); opacity:0; margin-left:.4rem; transition:opacity .2s,transform .2s; display:inline-block; }
+.tool:hover .tool__name .arrow{ opacity:1; transform:translateX(3px); }
+.tool__status{ flex:none; font-size:10px; letter-spacing:.11em; text-transform:uppercase; padding:2px 8px; border-radius:999px; border:1px solid; }
+.tool[data-status="live"] .tool__status{ color:var(--accent); border-color:rgba(var(--accent-rgb),.4); background:rgba(var(--accent-rgb),.08); }
+.tool[data-status="wip"] .tool__status{ color:var(--amber); border-color:rgba(255,180,84,.35); background:rgba(255,180,84,.07); }
+.tool[data-status="soon"] .tool__status{ color:var(--dim); border-color:var(--border); }
+.tool__desc{ color:var(--dim); font-size:.87rem; margin:0; flex:1; }
+.tool__tags{ display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0; list-style:none; }
+.tool__tags li{ font-size:10.5px; color:var(--dimmer); border:1px solid var(--border); border-radius:5px; padding:1px 7px; letter-spacing:.03em; }
+.tool[data-status="soon"]{ opacity:.72; }
+.tool[data-status="soon"]:hover{ opacity:1; }
+
+/* ── Stack ─────────────────────────────────────────────────── */
+.stack{ display:grid; grid-template-columns:1fr; gap:10px 40px; margin:0; }
+@media (min-width:760px){ .stack{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.stack div{ display:flex; gap:10px; align-items:baseline; }
+.stack dt{ color:var(--accent-soft); font-size:.8rem; letter-spacing:.06em; text-transform:uppercase; flex:none; min-width:92px; }
+.stack dd{ margin:0; color:var(--fg); font-size:.88rem; }
+
+/* ── Links row ─────────────────────────────────────────────── */
+.links{ display:flex; flex-wrap:wrap; gap:10px; margin:0; padding:0; list-style:none; }
+.links a{
+  display:inline-flex; align-items:center; gap:.5rem;
+  border:1px solid var(--border); border-radius:9px; padding:8px 14px;
+  color:var(--fg); background:rgba(255,255,255,.02); font-size:.88rem;
+}
+.links a::before{ content:"→"; color:var(--accent); }
+.links a:hover{ border-color:rgba(var(--accent-rgb),.45); background:rgba(var(--accent-rgb),.07); color:var(--accent); }
+
+/* ── Output area + prompt ──────────────────────────────────── */
+#output:not(:empty){ margin-bottom:1.4rem; }
+.entry{ margin:0 0 1.15rem; animation:fade-up .3s ease both; }
+.entry pre{ margin:.2rem 0 0; white-space:pre-wrap; word-break:break-word; color:var(--dim); font:inherit; }
+.entry .k{ color:var(--accent); }
+.entry .w{ color:var(--amber); }
+.entry .e{ color:var(--red); }
+
+.promptline{ display:flex; align-items:center; gap:.55rem; border-top:1px dashed var(--border); padding-top:1.15rem; }
+.promptline > .sig{ color:var(--accent); font-weight:700; flex:none; }
+.field{ position:relative; flex:1; display:flex; align-items:center; min-width:0; }
+#cmd{
+  width:100%; background:transparent; border:0; outline:0; padding:0;
+  color:var(--fg); font:inherit; caret-color:transparent;
+}
+#cmd::placeholder{ color:var(--dimmer); }
+#cmd:focus::placeholder{ color:transparent; }
+#cmd:placeholder-shown:not(:focus) ~ .caret{ opacity:0; }
+.mirror{ position:absolute; left:0; top:0; visibility:hidden; white-space:pre; font:inherit; pointer-events:none; }
+.caret{
+  position:absolute; left:0; top:50%; margin-top:-.62em;
+  width:.62em; height:1.22em; background:var(--accent);
+  box-shadow:0 0 12px rgba(var(--accent-rgb),.85);
+  pointer-events:none; animation:blink 1.05s steps(1) infinite;
+}
+.field:not(:focus-within) .caret{ opacity:.32; animation:none; }
+@keyframes blink{ 0%,49%{opacity:1;} 50%,100%{opacity:0;} }
+
+.chips{ display:flex; flex-wrap:wrap; gap:7px; margin:.95rem 0 0; }
+.chips button{
+  font:inherit; font-size:.78rem; color:var(--dim); cursor:pointer;
+  background:rgba(255,255,255,.025); border:1px solid var(--border); border-radius:7px; padding:4px 11px;
+  transition:color .18s,border-color .18s,background .18s;
+}
+.chips button:hover{ color:var(--accent); border-color:rgba(var(--accent-rgb),.4); background:rgba(var(--accent-rgb),.07); }
+
+/* ── Status bar ────────────────────────────────────────────── */
+.status{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:8px 15px; border-top:1px solid var(--border);
+  background:rgba(0,0,0,.32); color:var(--dimmer); font-size:11.5px; letter-spacing:.03em;
+}
+.status kbd{ font:inherit; color:var(--accent-soft); border:1px solid var(--border); border-radius:4px; padding:0 5px; }
+
+.skip{
+  position:fixed; right:14px; bottom:14px; z-index:95;
+  font:inherit; font-size:.75rem; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--dim); background:rgba(10,14,13,.86); border:1px solid var(--border);
+  border-radius:999px; padding:6px 14px; cursor:pointer; backdrop-filter:blur(6px);
+}
+.skip:hover{ color:var(--accent); border-color:rgba(var(--accent-rgb),.4); }
+
+footer{ max-width:1000px; width:100%; color:var(--dimmer); font-size:11.5px; margin-top:16px; display:flex; flex-wrap:wrap; gap:6px 16px; justify-content:space-between; }
+
+.sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+@media (max-width:560px){
+  body{ font-size:14px; }
+  .body{ padding:16px 14px 18px; }
+  .bar__title{ font-size:11px; }
+  .tools{ grid-template-columns:1fr; }
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+  .crt::after{ display:none; }
+  .caret{ animation:none; }
+}
+</style>
+</head>
+<body>
+<div class="crt" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<main class="term">
+
+  <div class="bar">
+    <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="bar__title"><b>ruili.dev</b> — ~/ — zsh</div>
+    <div class="bar__badge">online</div>
+  </div>
+
+  <div class="body" id="body">
+
+    <!-- ══════════════════════════════════════════════════════════
+         SECTION: whoami   ← EDIT YOUR NAME / ROLE / LOCATION HERE
+         ══════════════════════════════════════════════════════════ -->
+    <section class="blk" id="sec-whoami" aria-labelledby="h-whoami">
+      <p class="cmd" data-type="whoami"></p>
+      <h1 class="hero__name" id="h-whoami">Rui&nbsp;Li</h1>
+      <p class="hero__role">Software engineer — I design, build and ship web applications end to end.</p>
+      <div class="hero__meta">
+        <span>Sydney, Australia</span>
+        <span>UTC+10</span>
+        <span>Open to interesting problems</span>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SECTION: about    ← EDIT YOUR BIO HERE
+         ══════════════════════════════════════════════════════════ -->
+    <section class="blk" id="sec-about" aria-labelledby="h-about">
+      <p class="cmd" data-type="cat about.txt"></p>
+      <h2 class="sr-only" id="h-about">About</h2>
+      <p class="bio">
+        I build software that does <em>one thing properly</em> — from the data model up to the last
+        pixel. Most of my work lives on the web: edge-deployed services, offline-first PWAs, and
+        small focused tools that remove a specific piece of friction for the people using them.
+      </p>
+      <p class="bio">
+        This page is the index for those tools. It grows every time I ship one.
+      </p>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SECTION: tools
+
+         ▸ TO ADD A TOOL: copy one <li class="tool"> block below,
+           change the fields, and you're done. Nothing else to edit —
+           the terminal commands (`ls`, `open <slug>`) read this list
+           straight out of the page.
+
+         ▸ data-slug   = the name used by `open <slug>` in the terminal
+         ▸ data-status = live | wip | soon
+         ▸ href="#"    = not published yet. Clicking it (or `open <slug>`)
+                         answers politely in the terminal instead of 404-ing.
+                         Drop the real URL in and flip data-status to "live".
+         ══════════════════════════════════════════════════════════ -->
+    <section class="blk" id="sec-tools" aria-labelledby="h-tools">
+      <div class="sec-head">
+        <p class="cmd" data-type="ls -l ./tools"></p>
+        <span class="rule" aria-hidden="true"></span>
+      </div>
+      <h2 class="sr-only" id="h-tools">Tools</h2>
+
+      <ul class="tools" id="tools">
+
+        <li class="tool" data-slug="msm-toolkit" data-status="wip">
+          <div class="tool__top">
+            <h3 class="tool__name"><a href="#" target="_blank" rel="noopener">msm-toolkit<span class="arrow" aria-hidden="true">→</span></a></h3>
+            <span class="tool__status">wip</span>
+          </div>
+          <p class="tool__desc">Utilities for MapleStory M (Global) — the numbers the game makes you work out by hand, worked out for you.</p>
+          <ul class="tool__tags"><li>Cloudflare Workers</li><li>JavaScript</li></ul>
+        </li>
+
+        <li class="tool" data-slug="fortune" data-status="wip">
+          <div class="tool__top">
+            <h3 class="tool__name"><a href="#" target="_blank" rel="noopener">fortune<span class="arrow" aria-hidden="true">→</span></a></h3>
+            <span class="tool__status">wip</span>
+          </div>
+          <p class="tool__desc">A MapleStory M–themed fortune teller in Traditional Chinese. Animated, game-accurate, entirely unserious.</p>
+          <ul class="tool__tags"><li>HTML</li><li>CSS animation</li><li>zh-Hant</li></ul>
+        </li>
+
+        <li class="tool" data-slug="revision" data-status="wip">
+          <div class="tool__top">
+            <h3 class="tool__name"><a href="#" target="_blank" rel="noopener">revision<span class="arrow" aria-hidden="true">→</span></a></h3>
+            <span class="tool__status">wip</span>
+          </div>
+          <p class="tool__desc">An offline-first revision app for a Year 1 student: 22 games across maths, English, science, geography, French and music.</p>
+          <ul class="tool__tags"><li>PWA</li><li>Service Worker</li><li>Web Speech API</li></ul>
+        </li>
+
+        <li class="tool" data-slug="next" data-status="soon">
+          <div class="tool__top">
+            <h3 class="tool__name"><a href="https://github.com/lrlrlrlr" target="_blank" rel="noopener">next<span class="arrow" aria-hidden="true">→</span></a></h3>
+            <span class="tool__status">soon</span>
+          </div>
+          <p class="tool__desc">Whatever I'm annoyed by next. Follow along on GitHub.</p>
+          <ul class="tool__tags"><li>tbd</li></ul>
+        </li>
+
+      </ul>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SECTION: stack    ← EDIT YOUR STACK HERE
+         ══════════════════════════════════════════════════════════ -->
+    <section class="blk" id="sec-stack" aria-labelledby="h-stack">
+      <div class="sec-head">
+        <p class="cmd" data-type="cat stack.json"></p>
+        <span class="rule" aria-hidden="true"></span>
+      </div>
+      <h2 class="sr-only" id="h-stack">Stack</h2>
+      <dl class="stack">
+        <div><dt>Languages</dt><dd>JavaScript · TypeScript · Python</dd></div>
+        <div><dt>Frontend</dt><dd>Vanilla + Web APIs, PWA, Service Workers</dd></div>
+        <div><dt>Edge</dt><dd>Cloudflare Workers · KV · Pages</dd></div>
+        <div><dt>Ops</dt><dd>Git · GitHub Actions · Pages</dd></div>
+      </dl>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════
+         SECTION: contact  ← EDIT YOUR LINKS HERE
+         ══════════════════════════════════════════════════════════ -->
+    <section class="blk" id="sec-contact" aria-labelledby="h-contact">
+      <div class="sec-head">
+        <p class="cmd" data-type="cat contact"></p>
+        <span class="rule" aria-hidden="true"></span>
+      </div>
+      <h2 class="sr-only" id="h-contact">Contact</h2>
+      <ul class="links">
+        <li><a href="https://github.com/lrlrlrlr" target="_blank" rel="noopener">github.com/lrlrlrlr</a></li>
+        <li><a href="mailto:hello@ruili.dev">hello@ruili.dev</a></li>
+      </ul>
+    </section>
+
+    <!-- dynamic command output lands here -->
+    <div id="output" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- ══════════════════════════════════════════════════════════
+         The live prompt
+         ══════════════════════════════════════════════════════════ -->
+    <form class="promptline" id="promptline" autocomplete="off">
+      <span class="sig" aria-hidden="true">$</span>
+      <label class="sr-only" for="cmd">Type a command</label>
+      <span class="field">
+        <input id="cmd" name="cmd" type="text" spellcheck="false" autocapitalize="off"
+               autocorrect="off" enterkeyhint="go" placeholder="type `help` and hit enter">
+        <span class="mirror" id="mirror" aria-hidden="true"></span>
+        <span class="caret" id="caret" aria-hidden="true"></span>
+      </span>
+    </form>
+
+    <div class="chips" id="chips">
+      <button type="button" data-cmd="help">help</button>
+      <button type="button" data-cmd="ls">ls</button>
+      <button type="button" data-cmd="whoami">whoami</button>
+      <button type="button" data-cmd="stack">stack</button>
+      <button type="button" data-cmd="contact">contact</button>
+      <button type="button" data-cmd="theme">theme</button>
+    </div>
+
+  </div>
+
+  <div class="status">
+    <span>try <kbd>help</kbd> · <kbd>↑</kbd> history · <kbd>Tab</kbd> complete</span>
+    <span id="clock">--:--:--</span>
+  </div>
+
+</main>
+
+<button class="skip" id="skip" type="button" hidden>skip intro</button>
+
+<footer>
+  <span>© <span id="year">2026</span> Rui Li — built by hand, one file, no framework.</span>
+  <span><a href="https://github.com/lrlrlrlr/ruili.dev" target="_blank" rel="noopener">source</a></span>
+</footer>
+
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"Person",
+  "name":"Rui Li",
+  "url":"https://ruili.dev/",
+  "jobTitle":"Software Engineer",
+  "address":{"@type":"PostalAddress","addressLocality":"Sydney","addressCountry":"AU"},
+  "sameAs":["https://github.com/lrlrlrlr"]
+}
+</script>
+
+<style>
+  .cmd.typing::after{
+    content:""; display:inline-block; width:.58em; height:1.05em;
+    background:var(--accent); vertical-align:-.18em; margin-left:2px;
+    box-shadow:0 0 10px rgba(var(--accent-rgb),.8);
+    animation:blink 1.05s steps(1) infinite;
+  }
+  .tools .tool{ animation:fade-up .45s cubic-bezier(.2,.8,.2,1) both; }
+  .tools .tool:nth-child(1){ animation-delay:.02s }
+  .tools .tool:nth-child(2){ animation-delay:.09s }
+  .tools .tool:nth-child(3){ animation-delay:.16s }
+  .tools .tool:nth-child(4){ animation-delay:.23s }
+  .tools .tool:nth-child(5){ animation-delay:.30s }
+  .tools .tool:nth-child(6){ animation-delay:.37s }
+  .glitch{ animation:glitch .5s steps(2) 3; }
+  @keyframes glitch{
+    0%{ transform:none; filter:none; }
+    25%{ transform:translateX(-3px) skewX(-3deg); filter:hue-rotate(70deg); }
+    50%{ transform:translateX(3px); filter:none; }
+    75%{ transform:translateX(-2px) skewX(2deg); filter:hue-rotate(-50deg); }
+    100%{ transform:none; filter:none; }
+  }
+</style>
+
+<script>
+(function () {
+  "use strict";
+
+  var $  = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  var input   = $("#cmd");
+  var mirror  = $("#mirror");
+  var caret   = $("#caret");
+  var output  = $("#output");
+  var promptl = $("#promptline");
+  var chips   = $("#chips");
+  var skipBtn = $("#skip");
+  var body    = $("#body");
+
+  $("#year").textContent = new Date().getFullYear();
+
+  /* ── helpers ─────────────────────────────────────────────── */
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function pad(s, n) { s = String(s); while (s.length < n) s += " "; return s; }
+  function clip(s, n) {
+    s = String(s).trim();
+    if (s.length <= n) return s;
+    var cut = s.slice(0, n);
+    var sp = cut.lastIndexOf(" ");
+    return (sp > n * 0.6 ? cut.slice(0, sp) : cut).replace(/[\s,.\u2014-]+$/, "") + "\u2026";
+  }
+
+  /* Tools are read straight out of the page — add a card, it just works. */
+  function tools() {
+    return $$(".tool").map(function (el) {
+      var a = $(".tool__name a", el);
+      return {
+        slug: el.dataset.slug || "",
+        status: el.dataset.status || "soon",
+        name: a ? a.textContent.replace("→", "").trim() : "",
+        href: a ? a.getAttribute("href") : "#",
+        desc: ($(".tool__desc", el) || {}).textContent || "",
+        tags: $$(".tool__tags li", el).map(function (t) { return t.textContent; })
+      };
+    });
+  }
+
+  /* ── intro typing sequence ───────────────────────────────── */
+  var SECTIONS = ["#sec-whoami", "#sec-about", "#sec-tools", "#sec-stack", "#sec-contact"];
+  var introDone = false;
+
+  function parts(sec) {
+    var cmdEl = $(".cmd[data-type]", sec);
+    var rest = Array.prototype.slice.call(sec.children).filter(function (el) {
+      return el !== cmdEl && !el.contains(cmdEl);
+    });
+    return { cmdEl: cmdEl, rest: rest };
+  }
+
+  function typeText(el, text, speed) {
+    return new Promise(function (resolve) {
+      el.classList.add("typing");
+      var i = 0;
+      (function step() {
+        el.textContent = text.slice(0, ++i);
+        if (i < text.length) setTimeout(step, speed + Math.random() * 22);
+        else { el.classList.remove("typing"); resolve(); }
+      })();
+    });
+  }
+
+  function finishIntro() {
+    if (introDone) return;
+    introDone = true;
+    SECTIONS.forEach(function (sel) {
+      var sec = $(sel); if (!sec) return;
+      var p = parts(sec);
+      sec.hidden = false;
+      if (p.cmdEl) { p.cmdEl.textContent = p.cmdEl.dataset.type; p.cmdEl.classList.remove("typing"); }
+      p.rest.forEach(function (el) { el.style.display = ""; });
+    });
+    promptl.hidden = false; chips.hidden = false;
+    if (skipBtn) skipBtn.hidden = true;
+    if (window.innerWidth > 760 && !("ontouchstart" in window)) input.focus();
+    syncCaret();
+  }
+
+  function runIntro() {
+    SECTIONS.forEach(function (sel) { var s = $(sel); if (s) s.hidden = true; });
+    promptl.hidden = true; chips.hidden = true;
+
+    if (reduced) { finishIntro(); return; }
+
+    skipBtn.hidden = false;
+    var chain = Promise.resolve();
+    SECTIONS.forEach(function (sel, idx) {
+      chain = chain.then(function () {
+        if (introDone) return;
+        var sec = $(sel); if (!sec) return;
+        var p = parts(sec);
+        sec.hidden = false;
+        p.rest.forEach(function (el) { el.style.display = "none"; });
+        return typeText(p.cmdEl, p.cmdEl.dataset.type, idx === 0 ? 46 : 30).then(function () {
+          if (introDone) return;
+          p.rest.forEach(function (el) {
+            el.style.display = "";
+            if (!el.classList.contains("tools")) el.classList.add("reveal");
+          });
+          return new Promise(function (r) { setTimeout(r, 330); });
+        });
+      });
+    });
+    chain.then(finishIntro);
+  }
+
+  skipBtn.addEventListener("click", finishIntro);
+  window.addEventListener("keydown", function (e) {
+    if (!introDone && (e.key === "Escape" || e.key === "Enter" || e.key === " ")) finishIntro();
+  });
+
+  /* ── caret mirror ────────────────────────────────────────── */
+  function syncCaret() {
+    var pos = input.selectionStart == null ? input.value.length : input.selectionStart;
+    mirror.textContent = input.value.slice(0, pos);
+    var x = Math.min(mirror.offsetWidth, Math.max(0, input.clientWidth - 10));
+    caret.style.transform = "translateX(" + x + "px)";
+  }
+  ["input", "keyup", "click", "focus", "blur", "select"].forEach(function (ev) {
+    input.addEventListener(ev, syncCaret);
+  });
+  window.addEventListener("resize", syncCaret);
+
+  /* ── command output ──────────────────────────────────────── */
+  function print(cmdText, html) {
+    var e = document.createElement("div");
+    e.className = "entry";
+    e.innerHTML = (cmdText ? '<p class="cmd">' + esc(cmdText) + "</p>" : "") +
+                  (html ? "<pre>" + html + "</pre>" : "");
+    output.appendChild(e);
+    requestAnimationFrame(function () {
+      promptl.scrollIntoView({ block: "end", behavior: reduced ? "auto" : "smooth" });
+    });
+  }
+  var K = function (s) { return '<span class="k">' + esc(s) + "</span>"; };
+  var W = function (s) { return '<span class="w">' + esc(s) + "</span>"; };
+  var E = function (s) { return '<span class="e">' + esc(s) + "</span>"; };
+
+  function jump(sel) {
+    var el = $(sel);
+    if (el) el.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+  }
+
+  /* ── commands ────────────────────────────────────────────── */
+  var THEMES = ["green", "amber", "ice", "magenta"];
+
+  var COMMANDS = {
+    help: function () {
+      var rows = [
+        ["help", "this list"],
+        ["whoami", "who I am"],
+        ["about", "the longer version"],
+        ["ls", "list the tools"],
+        ["open <name>", "open a tool in a new tab"],
+        ["stack", "what I build with"],
+        ["contact", "how to reach me"],
+        ["github", "open my GitHub"],
+        ["theme [name]", "green · amber · ice · magenta"],
+        ["date", "current time"],
+        ["clear", "clear the output"]
+      ];
+      return rows.map(function (r) { return "  " + K(pad(r[0], 14)) + r[1]; }).join("\n") +
+             "\n\n  " + W("↑/↓") + " history   " + W("Tab") + " complete";
+    },
+    whoami: function () { jump("#sec-whoami"); return "Rui Li — software engineer, Sydney AU."; },
+    about:  function () { jump("#sec-about"); return "↑ see about.txt"; },
+    ls: function () {
+      var t = tools();
+      var w = Math.max.apply(null, t.map(function (x) { return x.slug.length; }).concat([6]));
+      return t.map(function (x) {
+        var mark = x.status === "live" ? K("●") : x.status === "wip" ? W("◐") : '<span class="k" style="opacity:.4">○</span>';
+        return "  " + mark + "  " + K(pad(x.slug, w + 2)) + esc(pad(x.status, 6)) + "  " + esc(clip(x.desc, 56));
+      }).join("\n") + "\n\n  " + W("open <name>") + " to launch one.";
+    },
+    tools: function () { jump("#sec-tools"); return COMMANDS.ls(); },
+    open: function (args) {
+      var slug = (args[0] || "").toLowerCase();
+      if (!slug) return E("usage: open <name>") + "  — try " + K("ls") + " first.";
+      var hit = tools().filter(function (x) { return x.slug === slug; })[0];
+      if (!hit) return E("no such tool: " + slug);
+      if (!hit.href || hit.href === "#") return W("`" + slug + "` isn't published yet.") + " Sit tight.";
+      window.open(hit.href, "_blank", "noopener");
+      return "opening " + K(hit.name) + " → " + esc(hit.href);
+    },
+    stack:   function () { jump("#sec-stack"); return "↑ see stack.json"; },
+    contact: function () { jump("#sec-contact"); return "github.com/lrlrlrlr · hello@ruili.dev"; },
+    github:  function () { window.open("https://github.com/lrlrlrlr", "_blank", "noopener"); return "opening github.com/lrlrlrlr"; },
+    theme: function (args) {
+      var cur = document.documentElement.dataset.theme || "green";
+      var next = (args[0] || "").toLowerCase();
+      if (next && THEMES.indexOf(next) === -1) return E("unknown theme: " + next) + "\n  available: " + THEMES.map(K).join(" · ");
+      if (!next) next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
+      document.documentElement.dataset.theme = next;
+      return "phosphor → " + K(next) + "   (" + THEMES.map(function (t) { return t === next ? K(t) : esc(t); }).join(" · ") + ")";
+    },
+    date:  function () { return esc(new Date().toString()); },
+    echo:  function (args) { return esc(args.join(" ")); },
+    clear: function () { output.innerHTML = ""; return null; },
+    sudo:  function () { return W("nice try.") + " This terminal has no root, only opinions."; },
+    matrix: function () {
+      var n = $(".hero__name");
+      if (n && !reduced) { n.classList.remove("glitch"); void n.offsetWidth; n.classList.add("glitch"); }
+      return K("wake up, neo...") + "\n  (nothing is actually happening. it just looks cool.)";
+    },
+    source: function () { window.open("https://github.com/lrlrlrlr/ruili.dev", "_blank", "noopener"); return "opening the source of this page"; },
+    exit:  function () { return W("there is no exit. you're on the web."); }
+  };
+  var ALIASES = { ll: "ls", dir: "ls", cls: "clear", man: "help", "?": "help", info: "about", cat: "about", mail: "contact", email: "contact" };
+  var NAMES = Object.keys(COMMANDS).concat(Object.keys(ALIASES)).sort();
+
+  function run(raw) {
+    var line = raw.trim();
+    if (!line) return;
+    var bits = line.split(/\s+/);
+    var name = bits[0].toLowerCase();
+    var args = bits.slice(1);
+    if (ALIASES[name]) name = ALIASES[name];
+
+    if (!COMMANDS[name]) {
+      print(line, E("command not found: " + name) + "\n  try " + K("help"));
+      return;
+    }
+    var res = COMMANDS[name](args);
+    if (name === "clear") return;
+    print(line, res);
+  }
+
+  /* ── history + tab completion ────────────────────────────── */
+  var hist = [], hpos = -1;
+
+  promptl.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var v = input.value;
+    if (v.trim()) { hist.push(v.trim()); hpos = hist.length; }
+    run(v);
+    input.value = "";
+    syncCaret();
+  });
+
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowUp") {
+      if (!hist.length) return;
+      e.preventDefault();
+      hpos = Math.max(0, hpos - 1);
+      input.value = hist[hpos] || "";
+      setTimeout(syncCaret, 0);
+    } else if (e.key === "ArrowDown") {
+      if (!hist.length) return;
+      e.preventDefault();
+      hpos = Math.min(hist.length, hpos + 1);
+      input.value = hist[hpos] || "";
+      setTimeout(syncCaret, 0);
+    } else if (e.key === "Tab") {
+      e.preventDefault();
+      var v = input.value, bits = v.split(/\s+/);
+      var pool = bits.length > 1 && /^(open)$/i.test(bits[0])
+        ? tools().map(function (t) { return t.slug; })
+        : (bits.length > 1 && /^theme$/i.test(bits[0]) ? THEMES : NAMES);
+      var frag = (bits[bits.length - 1] || "").toLowerCase();
+      var hits = pool.filter(function (c) { return c.indexOf(frag) === 0; });
+      if (hits.length === 1) {
+        bits[bits.length - 1] = hits[0];
+        input.value = bits.join(" ") + (bits.length === 1 && hits[0] === "open" ? " " : "");
+        syncCaret();
+      } else if (hits.length > 1) {
+        print(v, hits.map(K).join("   "));
+      }
+    } else if (e.key === "l" && e.ctrlKey) {
+      e.preventDefault(); output.innerHTML = "";
+    }
+  });
+
+  chips.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-cmd]");
+    if (!b) return;
+    input.value = b.dataset.cmd;
+    promptl.requestSubmit ? promptl.requestSubmit() : promptl.dispatchEvent(new Event("submit", { cancelable: true }));
+    input.focus();
+  });
+
+  /* click anywhere in the terminal to focus the prompt (unless selecting / clicking a control) */
+  body.addEventListener("click", function (e) {
+    if (!introDone) return;
+    if (e.target.closest("a, button, input")) return;
+    if (String(window.getSelection())) return;
+    if (window.innerWidth > 760) input.focus();
+  });
+
+  /* ── unpublished tools talk back through the terminal ────── */
+  $$(".tool").forEach(function (card) {
+    var a = $(".tool__name a", card);
+    if (!a || a.getAttribute("href") !== "#") return;
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      print("open " + (card.dataset.slug || ""), COMMANDS.open([card.dataset.slug || ""]));
+    });
+  });
+
+  /* ── pointer glow on tool cards ──────────────────────────── */
+  $$(".tool").forEach(function (card) {
+    card.addEventListener("pointermove", function (e) {
+      var r = card.getBoundingClientRect();
+      card.style.setProperty("--mx", (e.clientX - r.left) + "px");
+      card.style.setProperty("--my", (e.clientY - r.top) + "px");
+    });
+  });
+
+  /* ── clock ───────────────────────────────────────────────── */
+  var clock = $("#clock");
+  (function tick() {
+    var d = new Date();
+    clock.textContent = [d.getHours(), d.getMinutes(), d.getSeconds()]
+      .map(function (n) { return String(n).padStart(2, "0"); }).join(":") + " local";
+    setTimeout(tick, 1000);
+  })();
+
+  /* ── go ──────────────────────────────────────────────────── */
+  runIntro();
+})();
+</script>
+</body>
+</html>
